@@ -35,6 +35,9 @@ app.post("/signup", async (req, res, n) => {
     )
         return n();
 
+    if (/[^a-zA-Z0-9-_]/g.test(username))
+        return res.send("Your username includes forbidden characters!");
+
     Player.findOne({ username }, async (e, r) => {
         if (e) {
             console.error(e);
