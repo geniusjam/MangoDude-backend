@@ -1,3 +1,11 @@
+/**
+ * Removes an element from the array that satisfies the given function
+ * @param {Function} func the selector function
+ */
+Array.prototype.remove = (func) => {
+    return this.splice(this.findIndex(func), 1);
+};
+
 const express = require("express");
 const helmet = require("helmet");
 const mongoose = require("mongoose");
@@ -56,6 +64,13 @@ app.post("/signup", async (req, res, n) => {
     });
 });
 
+const DEFAULTS = {
+    playerPosition: {
+        x: 500 - 16 / 2,
+        y: 700 - 33 - 31,
+    },
+};
+
 const server = app.listen(process.env.PORT || 3000, () =>
     console.log("HTTP server ready!")
 );
@@ -80,14 +95,80 @@ io.on("connection", (socket) => {
             if (!r) return socket.emit("authfail");
             if (!(await bcrypt.compare(password, r.password)))
                 return socket.emit("authfail");
+            socket.user = r;
+            delete r.password;
+            r.serverTime = Date.now(); //TODO: calculate ping for more accurate time calculations on the front end
             socket.emit("authed", r);
 
+            socket.guests = []; //island guests
+            socket.host = null;
+            socket.x = 0;
+            socket.y = 0;
             onlinePlayers.push(socket);
         });
     });
 
+    socket.on("visit", (data) => {
+        if (typeof data !== "string") return;
+
+        /** the socket of the island owner */
+        const hostSocket = onlinePlayers.find(
+            (socket) => socket.user.username === data
+        );
+        if (!hostSocket) return socket.emit("usernameNotFound");
+        if (socket.id == hostSocket.id) return; //You can't visit your own island, you have to `back` for that
+
+        hostSocket.guests.push(socket);
+        socket.host = hostSocket;
+        //emit `join` to all guests of the island, including the owner (if the owner is in the island)
+    });
+
+    socket.on("back", () => {
+        //send the player to their own islands
+        if (!socket.host) return; //the player is already on their island
+        socket.host.guests.remove((guest) => guest.id === socket.id);
+        //TODO: send `leave` to all guests of the island, including the owner (if the owner is in the island)
+        socket.host = null;
+        socket.emit("guests", socket.guests); //just in case some guests joined the island while the owner was out
+
+        socket.x = DEFAULTS.playerPosition.x;
+        socket.y = DEFAULTS.playerPosition.y;
+    });
+
+    socket.on("buyTree", () => {
+        //TODO: check the price
+    });
+
+    socket.on("move", (data) => {
+        /** the x and y coords of the location the player wants to move to */
+        const { x, y } = data;
+        if (typeof x !== "number" || typeof y !== "number") return;
+
+        socket.x = DEFAULTS.playerPosition.x;
+        socket.y = DEFAULTS.playerPosition.y;
+
+        //TODO: check if there are other players in the island, if so update them too.
+    });
+
+    socket.on("harvest", (data) => {
+        if (
+            typeof data !== "number" ||
+            data < 0 ||
+            data >= socket.user.trees.length ||
+            data != Math.floor(data) //isn't integer
+        )
+            return;
+
+        if (socket[data].endsAt > Date.now()) return socket.emit("notGrown"); //this tree hasn't grown up yet
+
+        //TODO: decide some amount of mangoes to give to the player
+        //TODO: set a new endsAt for the tree
+        //TODO: upate the player and tree records in the database
+    });
+
     socket.on("disconnect", () => {
         if (!socket.user) return;
+        //TODO: send players in the island of the disconnected player to their own island.
         onlinePlayers = onlinePlayers.splice(
             onlinePlayers.findIndex((q) => q.id === socket.id),
             1
