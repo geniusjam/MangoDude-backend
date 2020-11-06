@@ -33,6 +33,12 @@ const Player = mongoose.model("players", playerSchema);
 app.use(helmet());
 app.use(bodyParser.urlencoded({ extended: false }));
 
+app.use(express.static("./public"));
+
+app.get("/", (req, res) =>
+    res.sendFile(path.join(__dirname, "public", "index.html"))
+);
+
 app.post("/signup", async (req, res, n) => {
     const { username, password } = req.body;
     if (
@@ -120,7 +126,7 @@ io.on("connection", (socket) => {
 
         hostSocket.guests.push(socket);
         socket.host = hostSocket;
-        //emit `join` to all guests of the island, including the owner (if the owner is in the island)
+        //TODO: emit `join` to all guests of the island, including the owner (if the owner is in the island)
     });
 
     socket.on("back", () => {
