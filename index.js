@@ -11,6 +11,7 @@ const helmet = require("helmet");
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const bodyParser = require("body-parser");
+const cookieParser = require("cookie-parser");
 const app = express();
 
 mongoose.connect(process.env.DATABASE_URL, {
@@ -32,13 +33,14 @@ const Player = mongoose.model("players", playerSchema);
 
 app.use(helmet());
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieParser());
 
 app.use(express.static("./public"));
 app.set("view engine", "ejs");
 
-app.get("/", (_req, res) => res.render("index"));
+app.get("/", (req, res) => res.render("index", { cookies: req.cookies }));
 
-app.get("/login", (_req, res) => res.render("login"));
+app.get("/login", (req, res) => res.render("login", { cookies: req.cookies }));
 
 app.post("/signup", async (req, res, n) => {
     const { username, password } = req.body;
@@ -71,10 +73,10 @@ app.post("/signup", async (req, res, n) => {
     });
 });
 
-app.use((req, res, next) => {
+app.use((_req, res) => {
+    // 404 logic
     res.status(404);
     res.render("404");
-    // 404 logic
 });
 
 const DEFAULTS = {

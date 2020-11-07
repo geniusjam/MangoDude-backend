@@ -100,5 +100,8 @@
                 </div>
             </div>
         </div>
+        <div class="h-25"></div>
+        <% if(!cookies.cookieUsage) { %> <%- include("../partials/cookieNotice")
+        %> <% }%>
     </body>
 </html>

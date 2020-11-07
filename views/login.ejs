@@ -50,5 +50,7 @@
                 </button>
             </form>
         </div>
+        <% if(!cookies.cookieUsage) { %> <%- include("../partials/cookieNotice")
+        %> <% }%>
     </body>
 </html>
