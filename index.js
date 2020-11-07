@@ -34,10 +34,11 @@ app.use(helmet());
 app.use(bodyParser.urlencoded({ extended: false }));
 
 app.use(express.static("./public"));
+app.set("view engine", "ejs");
 
-app.get("/", (req, res) =>
-    res.sendFile(path.join(__dirname, "public", "index.html"))
-);
+app.get("/", (_req, res) => res.render("index"));
+
+app.get("/login", (_req, res) => res.render("login"));
 
 app.post("/signup", async (req, res, n) => {
     const { username, password } = req.body;
@@ -68,6 +69,12 @@ app.post("/signup", async (req, res, n) => {
         await doc.save();
         res.send("OK");
     });
+});
+
+app.use((req, res, next) => {
+    res.status(404);
+    res.render("404");
+    // 404 logic
 });
 
 const DEFAULTS = {
